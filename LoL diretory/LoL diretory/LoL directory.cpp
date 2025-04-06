@@ -43,39 +43,46 @@ void insert() {
     int hp, mp, speed, range;
     char position[10];
 
-    cout << "이름(영어, 최대 20자) 체력 마나 속도 사거리 주포지션(top, jungle, mid, bottom, support) : ";
-    cin.ignore();
-    scanf("%[^	]s", name);
-    if (!(cin >> hp >> mp >> speed >> range >> position)) {
-        cout << "입력 오류입니다." << endl;
-        cin.clear(); cin.ignore(1000, '\n');
-        return;
-    }
+    while (true) {
+        cout << "이름(영어, 최대 20자) 체력 마나 속도 사거리 주포지션(top, jungle, mid, bottom, support) : ";
+        cin.ignore();
+        scanf("%[^\n]s", name);
 
-    if (strlen(name) <= 20 && hp > 0 && mp >= 0 && speed > 0 && range > 0) {
-        if (strcmp(position, "top") == 0 || strcmp(position, "jungle") == 0 || strcmp(position, "mid") == 0 || strcmp(position, "bottom") == 0 || strcmp(position, "support") == 0) {
-            for (int i = 0; i < 100; i++) {
-                if (champ[i].name[0] == '\0') {
-                    strncpy(champ[i].name, name, sizeof(champ[i].name));
-                    champ[i].hp = hp;
-                    champ[i].mp = mp;
-                    champ[i].speed = speed;
-                    champ[i].range = range;
-                    strncpy(champ[i].position, position, sizeof(champ[i].position));
-                    champcount++;
-                    cout << champ[i].position << endl;
-                    cout << "추가되었습니다." << endl;
-                    return;
+        if (!(cin >> hp >> mp >> speed >> range >> position)) {
+            cout << "숫자가 아닌 값이 입력되었습니다. 다시 시도하세요." << endl;
+            cin.clear();
+            cin.ignore(1000, '\n');
+            continue;
+        }
+
+        if (strlen(name) <= 20 && hp > 0 && mp >= 0 && speed > 0 && range > 0) {
+            if (strcmp(position, "top") == 0 || strcmp(position, "jungle") == 0 || strcmp(position, "mid") == 0 || strcmp(position, "bottom") == 0 || strcmp(position, "support") == 0) {
+                for (int i = 0; i < 100; i++) {
+                    if (champ[i].name[0] == '\0') {
+                        strncpy(champ[i].name, name, sizeof(champ[i].name));
+                        champ[i].hp = hp;
+                        champ[i].mp = mp;
+                        champ[i].speed = speed;
+                        champ[i].range = range;
+                        strncpy(champ[i].position, position, sizeof(champ[i].position));
+                        champcount++;
+                        cout << champ[i].position << endl;
+                        cout << "추가되었습니다." << endl;
+                        return;
+                    }
                 }
+                cout << "저장 공간이 없습니다." << endl;
+                return;
             }
-            cout << "저장 공간이 없습니다." << endl;
+            else {
+                cout << "잘못입력하셨습니다. (포지션 오류)" << endl;
+                return;
+            }
         }
         else {
-            cout << "잘못입력하셨습니다." << endl;
+            cout << "잘못입력하셨습니다. (조건 불충족)" << endl;
+            return;
         }
-    }
-    else {
-        cout << "잘못입력하셨습니다." << endl;
     }
 }
 
