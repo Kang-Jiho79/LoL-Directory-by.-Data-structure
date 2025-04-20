@@ -1,224 +1,339 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
-#include <string.h>
+#include <cstring>
 using namespace std;
 
 struct lol {
-public:
-    char name[30] = "\0";
-    int hp = 0;
-    int mp = 0;
-    int speed = 0;
-    int range = 0;
-    char position[10] = "\0";
+    char name[30];
+    int hp;
+    int mp;
+    int speed;
+    int range;
+    char position[10];
 };
 
-lol champ[100];
-int champcount = 0;
+struct Node {
+    lol data;
+    Node* next;
+};
 
-void say(int i) {
-    cout << champ[i].name << endl
-        << "체력 : " << champ[i].hp << endl
-        << "마나 : " << champ[i].mp << endl
-        << "속도 : " << champ[i].speed << endl
-        << "사거리 : " << champ[i].range << endl
-        << "주 포지션 : " << champ[i].position << endl;
-}
+Node* head = nullptr;
+bool isSorted = false;
 
-void SearchRecursive(int i, char name[], bool found = false) {
-    if (i >= champcount) {
-        if (!found)
-            cout << "해당 이름을 가진 챔피언은 없습니다." << endl;
-        return;
-    }
-    if (strcmp(champ[i].name, name) == 0) {
-        say(i);
-        found = true;
-    }
-    SearchRecursive(i + 1, name, found);
+void say(const lol& champ) {
+    cout << champ.name << endl;
+    cout << "체력 : " << champ.hp << endl;
+    cout << "마나 : " << champ.mp << endl;
+    cout << "속도 : " << champ.speed << endl;
+    cout << "사거리 : " << champ.range << endl;
+    cout << "주 포지션 : " << champ.position << endl;
 }
 
 void insert() {
-    char name[30];
-    int hp, mp, speed, range;
-    char position[10];
+    lol temp;
+    cout << "이름 : ";
+    getchar();  // 엔터 제거
+    scanf("%[^\n]s", temp.name);
+    getchar();  // 탭 제거
+    cout << "체력 마나 속도 사거리 주포지션(top, jungle, mid, bottom, support) : ";
+    if (!(cin >> temp.hp >> temp.mp >> temp.speed >> temp.range >> temp.position)) {
+        cout << "입력 오류\n"; cin.clear(); cin.ignore(1000, '\n'); return;
+    }
 
-    while (true) {
-        cout << "이름(영어, 최대 20자) 체력 마나 속도 사거리 주포지션(top, jungle, mid, bottom, support) : ";
-        cin.ignore();
-        scanf("%[^\n]s", name);
+    if (strlen(temp.name) > 20 || temp.hp <= 0 || temp.speed <= 0 || temp.range <= 0 ||
+        !(strcmp(temp.position, "top") == 0 || strcmp(temp.position, "jungle") == 0 ||
+            strcmp(temp.position, "mid") == 0 || strcmp(temp.position, "bottom") == 0 ||
+            strcmp(temp.position, "support") == 0)) {
+        cout << "입력 조건 불충족\n";
+        return;
+    }
 
-        if (!(cin >> hp >> mp >> speed >> range >> position)) {
-            cout << "숫자가 아닌 값이 입력되었습니다. 다시 시도하세요." << endl;
-            cin.clear();
-            cin.ignore(1000, '\n');
-            continue;
-        }
+    Node* newNode = new Node{ temp, nullptr };
 
-        if (strlen(name) <= 20 && hp > 0 && mp >= 0 && speed > 0 && range > 0) {
-            if (strcmp(position, "top") == 0 || strcmp(position, "jungle") == 0 || strcmp(position, "mid") == 0 || strcmp(position, "bottom") == 0 || strcmp(position, "support") == 0) {
-                for (int i = 0; i < 100; i++) {
-                    if (champ[i].name[0] == '\0') {
-                        strncpy(champ[i].name, name, sizeof(champ[i].name));
-                        champ[i].hp = hp;
-                        champ[i].mp = mp;
-                        champ[i].speed = speed;
-                        champ[i].range = range;
-                        strncpy(champ[i].position, position, sizeof(champ[i].position));
-                        champcount++;
-                        cout << champ[i].position << endl;
-                        cout << "추가되었습니다." << endl;
-                        return;
-                    }
+    if (!head) {
+        newNode->next = newNode;
+        head = newNode;
+    }
+    else if (isSorted && temp.hp > head->data.hp) {
+        Node* tail = head;
+        while (tail->next != head)
+            tail = tail->next;
+        newNode->next = head;
+        head = newNode;
+        tail->next = head;
+    }
+    else if (isSorted) {
+        Node* cur = head;
+        while (cur->next != head && cur->next->data.hp >= temp.hp)
+            cur = cur->next;
+        newNode->next = cur->next;
+        cur->next = newNode;
+    }
+    else {
+        Node* tail = head;
+        while (tail->next != head)
+            tail = tail->next;
+        tail->next = newNode;
+        newNode->next = head;
+    }
+
+    cout << "추가되었습니다.\n";
+}
+
+void deletenameRecursive(Node*& cur, char name[]) {
+    if (!head) {
+        cout << "챔피언이 없습니다.\n";
+        return;
+    }
+
+    Node* prev = nullptr;
+    Node* node = head;
+
+    do {
+        if (strcmp(node->data.name, name) == 0) {
+            if (node == head) {
+                Node* tail = head;
+                while (tail->next != head)
+                    tail = tail->next;
+
+                if (head == head->next) {
+                    delete head;
+                    head = nullptr;
                 }
-                cout << "저장 공간이 없습니다." << endl;
-                return;
+                else {
+                    Node* temp = head;
+                    head = head->next;
+                    tail->next = head;
+                    delete temp;
+                }
             }
             else {
-                cout << "잘못입력하셨습니다. (포지션 오류)" << endl;
-                return;
+                prev->next = node->next;
+                delete node;
             }
-        }
-        else {
-            cout << "잘못입력하셨습니다. (조건 불충족)" << endl;
+            cout << "챔피언이 삭제되었습니다.\n";
             return;
         }
-    }
+        prev = node;
+        node = node->next;
+    } while (node != head);
+
+    cout << "해당 챔피언이 없습니다.\n";
 }
 
-void deletenameRecursive(int i, char name[]) {
-    if (i >= champcount) {
-        cout << "해당 챔피언이 없습니다." << endl;
-        return;
-    }
-    if (strcmp(champ[i].name, name) == 0) {
-        champ[i].name[0] = '\0';
-        champ[i].hp = champ[i].mp = champ[i].speed = champ[i].range = 0;
-        champ[i].position[0] = '\0';
-        champcount--;
-        cout << "챔피언이 삭제되었습니다." << endl;
-        return;
-    }
-    deletenameRecursive(i + 1, name);
-}
+void deleteallRecursive(Node*& node, char position[]) {
+    if (!head) return;
 
-void deleteallRecursive(int i, char position[]) {
-    if (i >= champcount) {
-        cout << "해당 포지션의 챔피언이 삭제되었습니다" << endl;
-        return;
-    }
-    if (strcmp(champ[i].position, position) == 0) {
-        champ[i].name[0] = '\0';
-        champ[i].hp = champ[i].mp = champ[i].speed = champ[i].range = 0;
-        champ[i].position[0] = '\0';
-        champcount--;
-    }
-    deleteallRecursive(i + 1, position);
-}
+    Node* prev = nullptr;
+    Node* cur = head;
+    bool deleted = false;
 
-void FindmaxhpRecursive(int i = 0, int maxhp = 0) {
-    if (i >= champcount) {
-        for (int j = 0; j < champcount; j++) {
-            if (champ[j].hp == maxhp)
-                say(j);
+    do {
+        if (strcmp(cur->data.position, position) == 0) {
+            if (cur == head) {
+                Node* tail = head;
+                while (tail->next != head)
+                    tail = tail->next;
+
+                if (head == head->next) {
+                    delete head;
+                    head = nullptr;
+                    break;
+                }
+                else {
+                    Node* temp = head;
+                    head = head->next;
+                    tail->next = head;
+                    cur = head;
+                    delete temp;
+                }
+            }
+            else {
+                prev->next = cur->next;
+                delete cur;
+                cur = prev->next;
+            }
+            deleted = true;
         }
-        return;
-    }
-    if (champ[i].hp > maxhp)
-        maxhp = champ[i].hp;
-    FindmaxhpRecursive(i + 1, maxhp);
-}
-
-void sortbyhpRecursive(int i = 0) {
-    if (i >= champcount - 1) {
-        cout << "체력 기준으로 정렬완료" << endl;
-        return;
-    }
-    for (int j = i + 1; j < champcount; j++) {
-        if (champ[i].hp < champ[j].hp) {
-            lol temp = champ[i];
-            champ[i] = champ[j];
-            champ[j] = temp;
+        else {
+            prev = cur;
+            cur = cur->next;
         }
+    } while (cur != head);
+
+    if (deleted)
+        cout << "포지션의 챔피언이 삭제되었습니다.\n";
+    else
+        cout << "삭제할 포지션이 없습니다.\n";
+}
+
+void SearchRecursive(Node* node, char name[], bool found = false, Node* start = nullptr) {
+    if (!node) return;
+    if (!start) start = node;
+
+    if (strcmp(node->data.name, name) == 0) {
+        say(node->data);
+        found = true;
     }
-    sortbyhpRecursive(i + 1);
+
+    if (node->next == start) {
+        if (!found) cout << "해당 이름을 가진 챔피언이 없습니다.\n";
+        return;
+    }
+    SearchRecursive(node->next, name, found, start);
 }
 
-void printAllRecursive(int i = 0) {
-    if (i >= champcount) return;
-    say(i);
-    printAllRecursive(i + 1);
+void printAllRecursive(Node* node, Node* start = nullptr) {
+    if (!node) return;
+    if (!start) start = node;
+    say(node->data);
+    if (node->next == start) return;
+    printAllRecursive(node->next, start);
 }
 
-void initalsetting_recursive(int i = 0) {
+void FindmaxhpRecursive(Node* node, bool findMax = true, int maxhp = 0, Node* start = nullptr) {
+    static int maxFound = 0;
+    if (!node) return;
+    if (!start) start = node;
+
+    if (findMax) {
+        if (node->data.hp > maxFound)
+            maxFound = node->data.hp;
+        if (node->next == start)
+            FindmaxhpRecursive(head, false, maxFound);
+        else
+            FindmaxhpRecursive(node->next, true, maxFound, start);
+    }
+    else {
+        if (node->data.hp == maxhp)
+            say(node->data);
+        if (node->next == start) {
+            maxFound = 0;
+            return;
+        }
+        FindmaxhpRecursive(node->next, false, maxhp, start);
+    }
+}
+
+void deleteAllNodes(Node* node) {
+    if (!node) return;
+    Node* cur = node->next;
+    while (cur != node) {
+        Node* temp = cur;
+        cur = cur->next;
+        delete temp;
+    }
+    delete node;
+    head = nullptr;
+}
+
+void sorthp() {
+    if (!head || head->next == head) {
+        isSorted = true;
+        return;
+    }
+
+    Node* sorted = nullptr;
+    Node* cur = head;
+
+    do {
+        Node* next = cur->next;
+        if (!sorted) {
+            cur->next = cur;
+            sorted = cur;
+        }
+        else if (cur->data.hp > sorted->data.hp) {
+            Node* tail = sorted;
+            while (tail->next != sorted)
+                tail = tail->next;
+            cur->next = sorted;
+            sorted = cur;
+            tail->next = sorted;
+        }
+        else {
+            Node* temp = sorted;
+            while (temp->next != sorted && temp->next->data.hp >= cur->data.hp)
+                temp = temp->next;
+            cur->next = temp->next;
+            temp->next = cur;
+        }
+        cur = next;
+    } while (cur != head);
+
+    head = sorted;
+    isSorted = true;
+    cout << "정렬 완료.\n";
+}
+
+void initialsetting_recursive(int i = 0) {
     if (i >= 22) return;
 
-    char name[30];
-    int hp, mp, speed, range;
-    char position[10];
-
+    lol temp;
     if (i == 0)
-        cout << "초기 세팅입니다. text 파일 전체를 복사해서 붙여넣어 주세요." << endl;
+        cout << "초기 세팅입니다. 텍스트 파일을 복사해서 붙여넣어 주세요.\n";
 
     if (i != 0)
         getchar();
 
-    if (scanf("%[^\t]s", name) != 1) {
-        cout << "이름 입력 오류, 다시 시도해 주세요." << endl;
+    if (scanf("%[^\t]s", temp.name) != 1) {
+        cout << "이름 입력 오류, 다시 시도해 주세요.\n";
         cin.clear(); cin.ignore(1000, '\n');
-        initalsetting_recursive(i);
+        initialsetting_recursive(i);
         return;
     }
 
-    if (!(cin >> hp >> mp >> speed >> range >> position)) {
-        cout << "숫자 입력 오류, 다시 시도해 주세요." << endl;
+    getchar();
+    if (!(cin >> temp.hp >> temp.mp >> temp.speed >> temp.range >> temp.position)) {
+        cout << "숫자 입력 오류, 다시 시도해 주세요.\n";
         cin.clear(); cin.ignore(1000, '\n');
-        initalsetting_recursive(i);
+        initialsetting_recursive(i);
         return;
     }
 
-    if (strlen(name) <= 20 && hp > 0 && mp >= 0 && speed > 0 && range > 0) {
-        if (strcmp(position, "top") == 0 || strcmp(position, "jungle") == 0 || strcmp(position, "mid") == 0 || strcmp(position, "bottom") == 0 || strcmp(position, "support") == 0) {
-            strncpy(champ[i].name, name, sizeof(champ[i].name));
-            champ[i].hp = hp;
-            champ[i].mp = mp;
-            champ[i].speed = speed;
-            champ[i].range = range;
-            strncpy(champ[i].position, position, sizeof(champ[i].position));
-            champcount++;
-            cout << "추가되었습니다." << endl;
+    if (strlen(temp.name) <= 20 && temp.hp > 0 && temp.mp >= 0 && temp.speed > 0 && temp.range > 0 &&
+        (strcmp(temp.position, "top") == 0 || strcmp(temp.position, "jungle") == 0 ||
+            strcmp(temp.position, "mid") == 0 || strcmp(temp.position, "bottom") == 0 ||
+            strcmp(temp.position, "support") == 0)) {
+
+        Node* newNode = new Node{ temp, nullptr };
+        if (!head) {
+            newNode->next = newNode;
+            head = newNode;
         }
         else {
-            cout << "잘못입력하셨습니다. (포지션 오류)" << endl;
+            Node* tail = head;
+            while (tail->next != head)
+                tail = tail->next;
+            tail->next = newNode;
+            newNode->next = head;
         }
+
+        cout << "추가되었습니다.\n";
     }
     else {
-        cout << "잘못입력하셨습니다. (조건 불충족)" << endl;
+        cout << "입력 조건 불충족\n";
     }
 
-    initalsetting_recursive(i + 1);
+    initialsetting_recursive(i + 1);
 }
 
 int main() {
     int cho, last;
-    initalsetting_recursive();
+    initialsetting_recursive();
     while (true) {
-        cout << "========================================" << endl << "명령어는 앞의 숫자로 입력한다." << endl;
-        cout << "1. Search  2. Insert   3. Delete   4. DeleteAll" << endl << "5. PrintAll   6. FindMaxHp  7. SortByHp" << endl;
-        cout << "========================================" << endl;
+        cout << "\n===== 메뉴 =====\n";
+        cout << "1. Search  2. Insert  3. Delete  4. DeleteAll\n";
+        cout << "5. PrintAll  6. FindMaxHp  7. SortHp  8. 종료\n";
+        cout << "==============\n";
         cin >> cho;
+
         switch (cho) {
         case 1: {
             char name[30];
-            cout << "이름(영어, 최대 20자) : ";
+            cout << "이름 입력: ";
             cin.ignore();
             scanf("%[^\n]s", name);
-            if (strlen(name) <= 20) {
-                SearchRecursive(0, name);
-            }
-            else {
-                cout << "이름이 너무 긺" << endl;
-            }
+            SearchRecursive(head, name);
             break;
         }
         case 2:
@@ -226,43 +341,35 @@ int main() {
             break;
         case 3: {
             char name[30];
-            cout << "이름(영어, 최대 20자) : ";
+            cout << "삭제할 이름 입력: ";
             cin.ignore();
             scanf("%[^\n]s", name);
-            if (strlen(name) <= 20) {
-                deletenameRecursive(0, name);
-            }
-            else {
-                cout << "이름이 너무 긺" << endl;
-            }
+            deletenameRecursive(head, name);
             break;
         }
         case 4: {
             char position[10];
-            cout << "주포지션(top, jungle, mid, bottom, support) : ";
+            cout << "포지션 입력: ";
             cin >> position;
-            if (strcmp(position, "top") == 0 || strcmp(position, "jungle") == 0 || strcmp(position, "mid") == 0 || strcmp(position, "bottom") == 0 || strcmp(position, "support") == 0) {
-                deleteallRecursive(0, position);
-            }
-            else {
-                cout << "포지션을 잘못 입력하였습니다." << endl;
-            }
+            deleteallRecursive(head, position);
             break;
         }
         case 5:
-            printAllRecursive();
+            printAllRecursive(head);
             break;
         case 6:
-            FindmaxhpRecursive();
+            FindmaxhpRecursive(head);
             break;
         case 7:
-            sortbyhpRecursive();
+            sorthp();
             break;
+        case 8:
+            deleteAllNodes(head);
+            cout << "프로그램 종료\n";
+            return 0;
         default:
-            cout << "잘못 입력하였습니다." << endl;
-            break;
+            cout << "잘못된 선택입니다.\n";
         }
-
         while (true) {
             cout << "계속 진행하겠다면 1 그만하겠다면 2 : " << endl;
             cin >> last;
