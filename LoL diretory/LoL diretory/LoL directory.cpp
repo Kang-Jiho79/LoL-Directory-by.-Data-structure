@@ -15,6 +15,7 @@ struct lol {
 struct Node {
     lol data;
     Node* next;
+    Node* prev; // prev 추가
 };
 
 Node* head = nullptr;
@@ -32,12 +33,15 @@ void say(const lol& champ) {
 void insert() {
     lol temp;
     cout << "이름 : ";
-    getchar();  // 엔터 제거
+    getchar();
     scanf("%[^\n]s", temp.name);
-    getchar();  // 탭 제거
+    getchar();
     cout << "체력 마나 속도 사거리 주포지션(top, jungle, mid, bottom, support) : ";
     if (!(cin >> temp.hp >> temp.mp >> temp.speed >> temp.range >> temp.position)) {
-        cout << "입력 오류\n"; cin.clear(); cin.ignore(1000, '\n'); return;
+        cout << "입력 오류\n"; 
+        cin.clear(); 
+        cin.ignore(1000, '\n'); 
+        return;
     }
 
     if (strlen(temp.name) > 20 || temp.hp <= 0 || temp.speed <= 0 || temp.range <= 0 ||
@@ -48,117 +52,94 @@ void insert() {
         return;
     }
 
-    Node* newNode = new Node{ temp, nullptr };
+    Node* newNode = new Node{ temp, nullptr, nullptr };
 
     if (!head) {
         newNode->next = newNode;
+        newNode->prev = newNode;
         head = newNode;
     }
     else if (isSorted && temp.hp > head->data.hp) {
-        Node* tail = head;
-        while (tail->next != head)
-            tail = tail->next;
+        Node* tail = head->prev;
         newNode->next = head;
+        newNode->prev = tail;
+        head->prev = newNode;
+        tail->next = newNode;
         head = newNode;
-        tail->next = head;
     }
     else if (isSorted) {
         Node* cur = head;
         while (cur->next != head && cur->next->data.hp >= temp.hp)
             cur = cur->next;
         newNode->next = cur->next;
+        newNode->prev = cur;
+        cur->next->prev = newNode;
         cur->next = newNode;
     }
     else {
-        Node* tail = head;
-        while (tail->next != head)
-            tail = tail->next;
+        Node* tail = head->prev;
         tail->next = newNode;
+        newNode->prev = tail;
         newNode->next = head;
+        head->prev = newNode;
     }
 
     cout << "추가되었습니다.\n";
 }
 
-void deletenameRecursive(Node*& cur, char name[]) {
+void deletenameRecursive(char name[]) {
     if (!head) {
         cout << "챔피언이 없습니다.\n";
         return;
     }
 
-    Node* prev = nullptr;
     Node* node = head;
-
     do {
         if (strcmp(node->data.name, name) == 0) {
-            if (node == head) {
-                Node* tail = head;
-                while (tail->next != head)
-                    tail = tail->next;
-
-                if (head == head->next) {
-                    delete head;
-                    head = nullptr;
-                }
-                else {
-                    Node* temp = head;
-                    head = head->next;
-                    tail->next = head;
-                    delete temp;
-                }
+            if (node == head && node->next == head) {
+                delete node;
+                head = nullptr;
             }
             else {
-                prev->next = node->next;
+                node->prev->next = node->next;
+                node->next->prev = node->prev;
+                if (node == head)
+                    head = node->next;
                 delete node;
             }
             cout << "챔피언이 삭제되었습니다.\n";
             return;
         }
-        prev = node;
         node = node->next;
     } while (node != head);
 
     cout << "해당 챔피언이 없습니다.\n";
 }
 
-void deleteallRecursive(Node*& node, char position[]) {
+void deleteallRecursive(char position[]) {
     if (!head) return;
 
-    Node* prev = nullptr;
     Node* cur = head;
     bool deleted = false;
-
     do {
+        Node* next = cur->next;
         if (strcmp(cur->data.position, position) == 0) {
-            if (cur == head) {
-                Node* tail = head;
-                while (tail->next != head)
-                    tail = tail->next;
-
-                if (head == head->next) {
-                    delete head;
-                    head = nullptr;
-                    break;
-                }
-                else {
-                    Node* temp = head;
-                    head = head->next;
-                    tail->next = head;
-                    cur = head;
-                    delete temp;
-                }
+            if (cur == head && cur->next == head) {
+                delete cur;
+                head = nullptr;
+                deleted = true;
+                break;
             }
             else {
-                prev->next = cur->next;
+                cur->prev->next = cur->next;
+                cur->next->prev = cur->prev;
+                if (cur == head)
+                    head = cur->next;
                 delete cur;
-                cur = prev->next;
+                deleted = true;
             }
-            deleted = true;
         }
-        else {
-            prev = cur;
-            cur = cur->next;
-        }
+        cur = next;
     } while (cur != head);
 
     if (deleted)
@@ -183,7 +164,7 @@ void SearchRecursive(Node* node, char name[], bool found = false, Node* start = 
     SearchRecursive(node->next, name, found, start);
 }
 
-void printAllRecursive(Node* node, Node* start = nullptr) {
+void printAllRecursive(Node* node = head, Node* start = nullptr) {
     if (!node) return;
     if (!start) start = node;
     say(node->data);
@@ -191,31 +172,37 @@ void printAllRecursive(Node* node, Node* start = nullptr) {
     printAllRecursive(node->next, start);
 }
 
-void FindmaxhpRecursive(Node* node, bool findMax = true, int maxhp = 0, Node* start = nullptr) {
-    static int maxFound = 0;
+void printAllback(Node* node = head->prev, Node* start = nullptr) {
+    if (!node) return;
+    if (!start) start = node;
+    say(node->data);
+    if (node->prev == start) return;
+    printAllback(node->prev, start);
+}
+
+void FindmaxhpRecursive(Node* node = head, bool findMax = true, int maxhp = 0, Node* start = nullptr) {
     if (!node) return;
     if (!start) start = node;
 
     if (findMax) {
-        if (node->data.hp > maxFound)
-            maxFound = node->data.hp;
+        if (node->data.hp > maxhp)
+            maxhp = node->data.hp;
         if (node->next == start)
-            FindmaxhpRecursive(head, false, maxFound);
+            FindmaxhpRecursive(head, false, maxhp);
         else
-            FindmaxhpRecursive(node->next, true, maxFound, start);
+            FindmaxhpRecursive(node->next, true, maxhp, start);
     }
     else {
         if (node->data.hp == maxhp)
             say(node->data);
         if (node->next == start) {
-            maxFound = 0;
             return;
         }
         FindmaxhpRecursive(node->next, false, maxhp, start);
     }
 }
 
-void deleteAllNodes(Node* node) {
+void deleteAllNodes(Node* node = head) {
     if (!node) return;
     Node* cur = node->next;
     while (cur != node) {
@@ -233,28 +220,31 @@ void sorthp() {
         return;
     }
 
-    Node* sorted = nullptr;
-    Node* cur = head;
+    Node* sorted = nullptr; // 정렬된거의 헤드값
+    Node* cur = head;       // 현재값
 
     do {
         Node* next = cur->next;
         if (!sorted) {
             cur->next = cur;
+            cur->prev = cur;
             sorted = cur;
-        }
+        }                   // 차피 처음값임
         else if (cur->data.hp > sorted->data.hp) {
-            Node* tail = sorted;
-            while (tail->next != sorted)
-                tail = tail->next;
+            Node* tail = sorted->prev;
             cur->next = sorted;
+            cur->prev = tail;
+            tail->next = cur;
+            sorted->prev = cur;
             sorted = cur;
-            tail->next = sorted;
         }
         else {
             Node* temp = sorted;
             while (temp->next != sorted && temp->next->data.hp >= cur->data.hp)
                 temp = temp->next;
             cur->next = temp->next;
+            cur->prev = temp;
+            temp->next->prev = cur;
             temp->next = cur;
         }
         cur = next;
@@ -281,8 +271,6 @@ void initialsetting_recursive(int i = 0) {
         initialsetting_recursive(i);
         return;
     }
-
-    getchar();
     if (!(cin >> temp.hp >> temp.mp >> temp.speed >> temp.range >> temp.position)) {
         cout << "숫자 입력 오류, 다시 시도해 주세요.\n";
         cin.clear(); cin.ignore(1000, '\n');
@@ -295,17 +283,18 @@ void initialsetting_recursive(int i = 0) {
             strcmp(temp.position, "mid") == 0 || strcmp(temp.position, "bottom") == 0 ||
             strcmp(temp.position, "support") == 0)) {
 
-        Node* newNode = new Node{ temp, nullptr };
+        Node* newNode = new Node{ temp, nullptr, nullptr };
         if (!head) {
             newNode->next = newNode;
+            newNode->prev = newNode;
             head = newNode;
         }
         else {
-            Node* tail = head;
-            while (tail->next != head)
-                tail = tail->next;
+            Node* tail = head->prev;
             tail->next = newNode;
+            newNode->prev = tail;
             newNode->next = head;
+            head->prev = newNode;
         }
 
         cout << "추가되었습니다.\n";
@@ -344,18 +333,33 @@ int main() {
             cout << "삭제할 이름 입력: ";
             cin.ignore();
             scanf("%[^\n]s", name);
-            deletenameRecursive(head, name);
+            deletenameRecursive(name);
             break;
         }
         case 4: {
             char position[10];
             cout << "포지션 입력: ";
             cin >> position;
-            deleteallRecursive(head, position);
+            deleteallRecursive(position);
             break;
         }
-        case 5:
-            printAllRecursive(head);
+        case 5: {
+            int print;
+            cout << "처음부터 출력하길 원한다면 1\n마지막부터 출력하길 원한다면 2\n";
+            cin >> print;
+            switch (print)
+            {
+            case 1:
+                printAllRecursive();
+                break;
+            case 2:
+                printAllback();
+                break;
+            default:
+                break;
+            }
+
+        }
             break;
         case 6:
             FindmaxhpRecursive(head);
@@ -381,7 +385,7 @@ int main() {
                 return 0;
             }
             else {
-                cout << "다시 입략하십시오" << endl;
+                cout << "다시 입력하십시오\n";
             }
         }
     }
