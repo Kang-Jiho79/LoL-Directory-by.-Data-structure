@@ -2,363 +2,302 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <cstring>
+#include <cstdlib>
 using namespace std;
 using namespace chrono;
 
-#define size 20000000
+#define MAX 20000000 // 2000만 개 충분히 담기도록
 
-struct lol {
+struct Champion {
     char position[10];
-    char name[30];
-    int hp;
-    int attack;
-    int depend;
+    char name[20];
+    int hp, atk, def;
 };
 
-struct Node_SL {
-    lol data;
-    Node_SL* next;
-};
+// SL 구조체
+struct SLNode {
+    Champion data;
+    SLNode* next;
+} *head_sl = NULL;
 
-struct Node_DL {
-    lol data;
-    Node_DL* next;
-    Node_DL* prev; // prev 추가
-};
+// BT 구조체
+struct BTNode {
+    Champion data;
+    BTNode* left, * right;
+} *root_bt = NULL;
 
-Node_SL* head_sl = nullptr;
-Node_DL* head_dl = nullptr;
-bool isSorted = false;
+BTNode* sortedArr_BT[MAX];
+int nodeCount = 0;
 
-void say(const lol& champ) {
-    cout << champ.position << " " << champ.name << " " << champ.hp << " " << champ.attack << " " << champ.depend << endl;
-}
-
-void printAll_sl() {
-    Node_SL* node_sl = head_sl;
-    for (int i = 0; i < size; ++i) {
-        if (i % 100000 == 0)
-            say(node_sl->data);
-        node_sl = node_sl->next;
-    }
-}
-
-void printAll_dl() {
-    Node_DL* node_dl = head_dl;
-    for (int i = 0; i < size; ++i) {
-        if (i % 100000 == 0)
-            say(node_dl->data);
-        node_dl = node_dl->next;
-    }
-}
-
-void Findmaxhp_sl() {
-    Node_SL* node_sl = head_sl;
-    int maxhp = 0;
-    while (node_sl->next != head_sl) {
-        if (node_sl->data.hp > maxhp)
-            maxhp = node_sl->data.hp;
-        node_sl = node_sl->next;
-    }
-    node_sl = head_sl;
-    while (node_sl->next != head_sl) {
-        if (node_sl->data.hp == maxhp)
-            say(node_sl->data);
-        node_sl = node_sl->next;
-    }
-}
-
-void Findmaxhp_dl() {
-    Node_DL* node_dl = head_dl;
-    int maxhp = 0;
-    while (node_dl->next != head_dl) {
-        if (node_dl->data.hp > maxhp)
-            maxhp = node_dl->data.hp;
-        node_dl = node_dl->next;
-    }
-    node_dl = head_dl;
-    while (node_dl->next != head_dl) {
-        if (node_dl->data.hp == maxhp)
-            say(node_dl->data);
-        node_dl = node_dl->next;
-    }
-}
-
-void deleteAllNode(Node_SL* node_sl = head_sl, Node_DL* node_dl = head_dl) {
-    if (!node_sl) return;
-    if (!node_dl) return;
-    Node_SL* cur_sl = node_sl->next;
-    Node_DL* cur_dl = node_dl->next;
-    while (cur_sl != node_sl) {
-        Node_SL* temp_sl = cur_sl;
-        Node_DL* temp_dl = cur_dl;
-        cur_sl = cur_sl->next;
-        cur_dl = cur_dl->next;
-        delete temp_sl;
-        delete temp_dl;
-    }
-    delete node_sl;
-    delete node_dl;
-    head_sl = nullptr;
-    head_dl = nullptr;
-}
-
-void initialsetting() {
-    lol temp;
-    FILE* fin = fopen("LOLDic.txt", "r");
-    Node_SL* tail_sl = nullptr;
-    if (!fin) {
-        cout << "파일을 찾을 수 없습니다." << endl;
+// --------- 파일 읽기 (SL 삽입) ----------
+void loadFileToSL() {
+    FILE* fp = fopen("LOLDic.txt", "r");
+    if (!fp) {
+        cout << "파일 열기 실패\n";
         return;
     }
-     for (int i = 0; i < 20000000; ++i) {
-        fscanf(fin, "%s %s %d %d %d", temp.position, temp.name, &temp.hp, &temp.attack, &temp.depend);
-        Node_SL* newNode_SL = new Node_SL{ temp, nullptr };
-        if (!head_sl) {
-            newNode_SL->next = newNode_SL;
-            head_sl = newNode_SL;
-            tail_sl = newNode_SL;
+
+    Champion temp;
+    while (fscanf(fp, "%s %s %d %d %d", temp.position, temp.name, &temp.hp, &temp.atk, &temp.def) == 5) {
+        SLNode* node = new SLNode{ temp, NULL };
+        node->next = head_sl;
+        head_sl = node;
+    }
+
+    fclose(fp);
+}
+
+// --------- SL → BT 변환 ----------
+void insertBT(Champion data);
+void convertSLtoBT() {
+    root_bt = NULL; // 기존 트리 초기화
+    SLNode* curr = head_sl;
+    while (curr) {
+        insertBT(curr->data);
+        curr = curr->next;
+    }
+}
+
+// --------- BT 삽입 ----------
+void insertBT(Champion data) {
+    BTNode** cur = &root_bt;
+    while (*cur) {
+        if (strcmp(data.name, (*cur)->data.name) < 0)
+            cur = &((*cur)->left);
+        else
+            cur = &((*cur)->right);
+    }
+    *cur = new BTNode{ data, NULL, NULL };
+}
+
+// --------- BT 탐색 ----------
+void searchBT(const char* name) {
+    BTNode* cur = root_bt;
+    while (cur) {
+        int cmp = strcmp(name, cur->data.name);
+        if (cmp == 0) {
+            printf("찾음: %s %s %d %d %d\n", cur->data.position, cur->data.name, cur->data.hp, cur->data.atk, cur->data.def);
+            return;
         }
-        else {
-            tail_sl->next = newNode_SL;
-            newNode_SL->next = head_sl;
-            tail_sl = newNode_SL;
-            
+        cur = (cmp < 0) ? cur->left : cur->right;
+    }
+    printf("찾을 수 없음: %s\n", name);
+}
+
+// --------- BT 삭제 ----------
+BTNode* deleteBT(BTNode* root, const char* name) {
+    if (!root) return NULL;
+    int cmp = strcmp(name, root->data.name);
+    if (cmp < 0) root->left = deleteBT(root->left, name);
+    else if (cmp > 0) root->right = deleteBT(root->right, name);
+    else {
+        if (!root->left) {
+            BTNode* temp = root->right;
+            delete root;
+            return temp;
         }
-        Node_DL* newNode_DL = new Node_DL{ temp, nullptr, nullptr };
-        if (!head_dl) {
-            newNode_DL->next = newNode_DL;
-            newNode_DL->prev = newNode_DL;
-            head_dl = newNode_DL;
+        else if (!root->right) {
+            BTNode* temp = root->left;
+            delete root;
+            return temp;
         }
-        else {
-            Node_DL* tail = head_dl->prev;
-            tail->next = newNode_DL;
-            newNode_DL->prev = tail;
-            newNode_DL->next = head_dl;
-            head_dl->prev = newNode_DL;
+        BTNode* succ = root->right;
+        while (succ->left) succ = succ->left;
+        root->data = succ->data;
+        root->right = deleteBT(root->right, succ->data.name);
+    }
+    return root;
+}
+
+// --------- BT 출력 (중위순회) ----------
+void printBT(BTNode* node, int i = 0) {
+    if (!node) return;
+    printBT(node->left, i + 1);
+    if (i % 10 == 0)
+        printf("%s %s %d %d %d\n", node->data.position, node->data.name, node->data.hp, node->data.atk, node->data.def);
+    printBT(node->right, i + 1);
+}
+
+// --------- SL 이름 기준 정렬 ----------
+SLNode* mergeSortedLists(SLNode* a, SLNode* b) {
+    if (!a) return b;
+    if (!b) return a;
+    SLNode* result = NULL;
+    if (strcmp(a->data.name, b->data.name) < 0) {
+        result = a;
+        result->next = mergeSortedLists(a->next, b);
+    }
+    else {
+        result = b;
+        result->next = mergeSortedLists(a, b->next);
+    }
+    return result;
+}
+
+void splitList(SLNode* source, SLNode** front, SLNode** back) {
+    SLNode* slow = source;
+    SLNode* fast = source->next;
+    while (fast) {
+        fast = fast->next;
+        if (fast) {
+            slow = slow->next;
+            fast = fast->next;
         }
     }
-     fclose(fin);
+    *front = source;
+    *back = slow->next;
+    slow->next = NULL;
 }
 
-Node_SL* breakCircular_sl(Node_SL* head) {
-    if (!head || head->next == head) return head;
-    Node_SL* tail = head;
-    while (tail->next != head)
-        tail = tail->next;
-    tail->next = nullptr;
-    return head;
-}
-
-Node_SL* bottomUpSort_sl(Node_SL* head) {
+SLNode* mergeSort(SLNode* head) {
     if (!head || !head->next) return head;
+    SLNode* a, * b;
+    splitList(head, &a, &b);
+    return mergeSortedLists(mergeSort(a), mergeSort(b));
+}
 
-    head = breakCircular_sl(head);  // 원형 끊기
+// --------- BT 정렬 관련 함수들 ----------
+void storeInorderArray_BT(BTNode* root) {
+    if (!root) return;
+    storeInorderArray_BT(root->left);
+    sortedArr_BT[nodeCount++] = root;
+    storeInorderArray_BT(root->right);
+}
 
-    int listSize = 1;
-    Node_SL dummy{ {}, head };
+void merge_BT(BTNode** arr, int left, int mid, int right) {
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
 
-    while (true) {
-        Node_SL* cur = dummy.next;
-        Node_SL* tail = &dummy;
-        int merges = 0;
+    BTNode** L = new BTNode * [n1];
+    BTNode** R = new BTNode * [n2];
 
-        while (cur) {
-            merges++;
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[left + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[mid + 1 + j];
 
-            Node_SL* left = cur;
-            Node_SL* right = nullptr;
-            Node_SL* next = nullptr;
-
-            // left 리스트 추출
-            int leftSize = 0;
-            for (leftSize = 0; leftSize < listSize && cur; ++leftSize)
-                cur = cur->next;
-
-            // right 리스트 추출
-            right = cur;
-            int rightSize = 0;
-            for (rightSize = 0; rightSize < listSize && cur; ++rightSize)
-                cur = cur->next;
-
-            // next = 남은 부분
-            next = cur;
-
-            // 병합
-            int l = leftSize, r = rightSize;
-            while (l > 0 || r > 0) {
-                if (l == 0) {
-                    tail->next = right;
-                    right = right->next;
-                    r--;
-                }
-                else if (r == 0 || (left->data.hp >= right->data.hp)) {
-                    tail->next = left;
-                    left = left->next;
-                    l--;
-                }
-                else {
-                    tail->next = right;
-                    right = right->next;
-                    r--;
-                }
-                tail = tail->next;
-            }
-
-            tail->next = next;
-        }
-
-        if (merges <= 1)
-            break;
-
-        listSize *= 2;
+    int i = 0, j = 0, k = left;
+    while (i < n1 && j < n2) {
+        if (strcmp(L[i]->data.name, R[j]->data.name) <= 0)
+            arr[k++] = L[i++];
+        else
+            arr[k++] = R[j++];
     }
 
-    // 원형 복원
-    Node_SL* last = dummy.next;
-    while (last->next)
-        last = last->next;
-    last->next = dummy.next;
+    while (i < n1)
+        arr[k++] = L[i++];
+    while (j < n2)
+        arr[k++] = R[j++];
 
-    return dummy.next;
+    delete[] L;
+    delete[] R;
 }
 
-Node_DL* breakCircular_dl(Node_DL* head) {
-    if (!head || head->next == head) return head;
-    Node_DL* tail = head->prev;
-    tail->next = nullptr;
-    head->prev = nullptr;
-    return head;
-}
-
-Node_DL* bottomUpSort_dl(Node_DL* head) {
-    if (!head || !head->next) return head;
-
-    head = breakCircular_dl(head);
-
-    int listSize = 1;
-    Node_DL dummy{ {}, head, nullptr };
-
-    while (true) {
-        Node_DL* cur = dummy.next;
-        Node_DL* tail = &dummy;
-        int merges = 0;
-
-        while (cur) {
-            merges++;
-
-            Node_DL* left = cur;
-            Node_DL* right = nullptr;
-            Node_DL* next = nullptr;
-
-            int leftSize = 0;
-            for (; leftSize < listSize && cur; ++leftSize)
-                cur = cur->next;
-
-            right = cur;
-
-            int rightSize = 0;
-            for (; rightSize < listSize && cur; ++rightSize)
-                cur = cur->next;
-
-            next = cur;
-
-            // 병합 시작
-            int l = leftSize, r = rightSize;
-            while (l > 0 || r > 0) {
-                if (l == 0) {
-                    tail->next = right;
-                    right->prev = tail;
-                    right = right->next;
-                    r--;
-                }
-                else if (r == 0 || (left->data.hp >= right->data.hp)) {
-                    tail->next = left;
-                    left->prev = tail;
-                    left = left->next;
-                    l--;
-                }
-                else {
-                    tail->next = right;
-                    right->prev = tail;
-                    right = right->next;
-                    r--;
-                }
-                tail = tail->next;
-            }
-
-            tail->next = next;
-            if (next) next->prev = tail;
-        }
-
-        if (merges <= 1)
-            break;
-
-        listSize *= 2;
+void mergeSort_BT(BTNode** arr, int left, int right) {
+    if (left < right) {
+        int mid = (left + right) / 2;
+        mergeSort_BT(arr, left, mid);
+        mergeSort_BT(arr, mid + 1, right);
+        merge_BT(arr, left, mid, right);
     }
-
-    // 원형 리스트 복원
-    Node_DL* last = dummy.next;
-    while (last->next)
-        last = last->next;
-
-    dummy.next->prev = last;
-    last->next = dummy.next;
-
-    return dummy.next;
 }
 
+BTNode* buildBalancedTree_BT(int start, int end) {
+    if (start > end) return NULL;
+    int mid = (start + end) / 2;
+    BTNode* root = sortedArr_BT[mid];
+    root->left = buildBalancedTree_BT(start, mid - 1);
+    root->right = buildBalancedTree_BT(mid + 1, end);
+    return root;
+}
+
+// --------- 정렬 함수 (SL/BT) ----------
+void SortByName_SL() {
+    auto start = high_resolution_clock::now();
+    head_sl = mergeSort(head_sl);
+    auto end = high_resolution_clock::now();
+    cout << "SortByName_SL: " << duration_cast<milliseconds>(end - start).count() << "ms\n";
+}
+
+void SortByName_BT() {
+    nodeCount = 0;
+    storeInorderArray_BT(root_bt);
+    mergeSort_BT(sortedArr_BT, 0, nodeCount - 1);
+    root_bt = buildBalancedTree_BT(0, nodeCount - 1);
+}
+
+// --------- 메인 함수 ----------
 int main() {
-    int cho, last;
-    initialsetting();
+    loadFileToSL();
+
+    int cho;
     while (true) {
         cout << "===== 메뉴 =====\n";
-        cout << "1. PrintAll  2. SortByHp  3. FindMaxHp\n";
+        cout << "1. SortByName_SL\n";
+        cout << "2. SL -> BT 변환\n";
+        cout << "3. SearchByName_BT\n";
+        cout << "4. Insert_BT\n";
+        cout << "5. Delete_BT\n";
+        cout << "6. PrintAll_BT\n";
+        cout << "7. SortByName_BT\n";
+        cout << "0. 종료\n";
         cout << "==============\n";
         cin >> cho;
 
+        char name[20];
+        Champion temp;
+
         switch (cho) {
-        case 1: {
-            auto start = high_resolution_clock::now();
-            printAll_sl();
-            auto end = high_resolution_clock::now();
-            auto duration_sl = duration_cast<milliseconds>(end - start);
-            start = high_resolution_clock::now();
-            printAll_dl();
-            end = high_resolution_clock::now();
-            auto duration_dl = duration_cast<milliseconds>(end - start);
-            cout << "SL : " << duration_sl.count() << "ms, DL : " << duration_dl.count() << "ms" << endl;
+        case 1:
+            SortByName_SL();
             break;
-        }
-        case 2: {
-            auto start = high_resolution_clock::now();
-            head_sl = bottomUpSort_sl(head_sl);
-            auto end = high_resolution_clock::now();
-            auto duration_sl = duration_cast<milliseconds>(end - start);
-            start = high_resolution_clock::now();
-            head_dl = bottomUpSort_dl(head_dl);
-            end = high_resolution_clock::now();
-            auto duration_dl = duration_cast<milliseconds>(end - start);
-            cout << "SL : " << duration_sl.count() << "ms, DL : " << duration_dl.count() << "ms" << endl;
+        case 2:
+            convertSLtoBT();
+            cout << "변환 완료\n";
             break;
-        }
-        case 3: {
-            auto start = high_resolution_clock::now();
-            Findmaxhp_sl();
-            auto end = high_resolution_clock::now();
-            auto duration_sl = duration_cast<milliseconds>(end - start);
-            start = high_resolution_clock::now();
-            Findmaxhp_dl();
-            end = high_resolution_clock::now();
-            auto duration_dl = duration_cast<milliseconds>(end - start);
-            cout << "SL : " << duration_sl.count() << "ms, DL : " << duration_dl.count() << "ms" << endl;
+        case 3:
+            cout << "이름 입력: ";
+            cin >> name;
+            searchBT(name);
             break;
+        case 4:
+            cout << "포지션 이름 체력 공격 방어 입력: ";
+            scanf("%s %s %d %d %d", temp.position, temp.name, &temp.hp, &temp.atk, &temp.def);
+            {
+                auto start = high_resolution_clock::now();
+                insertBT(temp);
+                auto end = high_resolution_clock::now();
+                cout << "Insert_BT: " << duration_cast<milliseconds>(end - start).count() << "ms\n";
+            }
+            break;
+        case 5:
+            cout << "삭제할 이름 입력: ";
+            cin >> name;
+            {
+                auto start = high_resolution_clock::now();
+                root_bt = deleteBT(root_bt, name);
+                auto end = high_resolution_clock::now();
+                cout << "Delete_BT: " << duration_cast<milliseconds>(end - start).count() << "ms\n";
+            }
+            break;
+        case 6:
+            printBT(root_bt);
+            break;
+        case 7:
+        {
+            auto start = high_resolution_clock::now();
+            SortByName_BT();
+            auto end = high_resolution_clock::now();
+            cout << "SortByName_BT: " << duration_cast<milliseconds>(end - start).count() << "ms\n";
         }
+        break;
+        case 0:
+            return 0;
         default:
             cout << "잘못된 선택입니다.\n";
         }
-        system("pause");
-        system("cls");
     }
+
+    return 0;
 }
